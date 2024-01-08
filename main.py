@@ -80,5 +80,7 @@ async def ping(ctx):
 
 # --- Moderation Commands ---
 
+# Moderation commands gonna go here (trust)
 
-bot.run(TOKEN)
+
+bot.run('No token 4 you')
