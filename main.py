@@ -1,7 +1,12 @@
-import json
 from discord.ext import commands
 from discord import Embed
 import discord
+import requests
+import asyncio
+import random
+import time
+import json
+import re
 
 
 with open('config.json') as config_file:
@@ -15,7 +20,7 @@ bot = discord.Bot(command_prefix=PREFIX)
 @bot.event
 async def on_command_error(ctx, error):
 	if isinstance(error, discord.ext.commands.CommandNotFound):
-	await ctx.send("command not found, use !commands for help")
+		await ctx.send("command not found, use !commands for help")
 
 @bot.event
 async def on_ready():
@@ -28,30 +33,46 @@ async def on_member_join(member):
 								f'Welcome to Future Innovators Hub, {member.mention}! we have fun this server. Hope you enjoy me server! If I don\'t kick you.')
 				await member.send(f'Welcome to the server, {member.mention}! Enjoy your stay here.')
 
+
+# --- Help Command ---
+
 @bot.command()
 async def commands(ctx):
-				embed = Embed(
-								title='Commands',
-								description='A list of all the commands available',
-								color=0x00ff00
-				)
+	embed = Embed(
+		title='Commands',
+		description='A list of all the commands available',
+		color=0x00ff00
+	)
 
-				embed.add_field(
-								name='__Utility commands__',
-								value='''
-				- **Ping |** Shows the latency of the bot
-				''',
-								inline=False
-				)
+	embed.add_field(
+		name='__Utility commands__',
+		value='''
+- **Ping |** Shows the latency of the bot
+- **Giveaway `duration` `prize` |** Start a giveaway with a set prize and duration
+- **Calculator |** A built-in calculator
+- **News `query` |** Shows an article based on your query
+		''',
+		inline=False
+	)
+	
+	embed.add_field(
+		name='__Moderation commands__',
+		value='''
+- **Ban `user` `reason` |** Bans a member from the guild
+- **Kick `user` `reason` |** Kicks a member from the guild
+- **Clear `amount` |** Deletes the amount of messages specified
+''', 
+		inline=False
+	)
+				
+	embed.set_footer(text='Future Innovations Utility v1.0')
 
-				# Corrected by removing the duplicate fields and moving the footer into the proper method
-				embed.set_footer(text='Some footer text')
+	await ctx.send(embed=embed)
 
-				await ctx.send(embed=embed)
 
 # --- Utility Commands ---
 
-# ping
+# Ping
 @bot.command()
 async def ping(ctx):
 				latency = bot.latency * 1000
@@ -59,7 +80,7 @@ async def ping(ctx):
 				Pong!
 				Latency: {latency:.2f}ms''')
 
-# giveaway
+# Giveaway
 @bot.command()
 async def giveaway(ctx, duration, prize):
 		if ctx.author.guild_permissions.administrator:
@@ -102,9 +123,9 @@ async def giveaway(ctx, duration, prize):
 				permissions_embed = discord.Embed(description="You do not have permission to start a giveaway.", color=discord.Color.red())
 				await ctx.send(embed=permissions_embed)
 
-	# calculate
+# Calculate
 @bot.command()
-async def calculate(ctx):
+async def calculator(ctx):
 		help_message = """To use the calculator, enter a equation, then the bot will solve it and send it to you. example: `5 + 3`
 
 		`+ = plus`
@@ -131,7 +152,7 @@ async def calculate(ctx):
 		except asyncio.TimeoutError:
 				await ctx.send("Calculation request timed out. Please try again.")
 
-
+# News
 @bot.command()
 async def news(ctx, *, query):
 				news_url = f'https://newsapi.org/v2/everything?q={query}&apiKey={NEWS_API_KEY}'
@@ -148,9 +169,84 @@ async def news(ctx, *, query):
 								await ctx.send(embed=embed)
 				except Exception as e:
 								await ctx.send(f"Error: {e}")
-					
+
+
 # --- Moderation Commands ---
 
-# Moderation commands gonna go here (trust)
+# Ban command
+@bot.command()
+async def ban(ctx, member: discord.Member, *, reason=None):
+	if ctx.author.guild_permissions.ban_members:
+
+		if member.guild_permissions.administrator:
+			await ctx.send('Could not ban member')
+			time.sleep(1)
+			await ctx.purge(limit=1)
+		
+		await member.ban(reason=reason)
+
+		embed = discord.Embed(
+		title=f'User has been banned',
+		color=0x00ff00
+			)
+
+		embed.add_field(
+		name=f'{member} has been banned!',
+		value=f'**Ban reason:** {reason}'
+			)
+
+		await ctx.send(embed=embed)
+	
+	else:
+		await ctx.send('You do not have permissions to ban members')
+		time.sleep(1)
+		await ctx.purge(limit=1)
+
+# Kick command
+@bot.command()
+async def kick(ctx, member: discord.Member, *, reason=None):
+	if ctx.author.guild_permissions.kick_members:
+		
+		if member.guild_permissions.administrator:
+			await ctx.send('Could not kick member')
+			time.sleep(1)
+			await ctx.purge(limit=1)
+		
+		await member.kick(reason=reason)
+
+		embed = discord.Embed(
+		title=f'User has been kicked',
+		color=0x00ff00
+			)
+
+		embed.add_field(
+		name=f'{member} has been kicked!',
+		value=f'**kick reason:** {reason}'
+			)
+
+		await ctx.send(embed=embed)
+	
+	else:
+		await ctx.send('You do not have permissions to kick members')
+		time.sleep(1)
+		await ctx.purge(limit=1)
+
+# Clear command
+bot.command()
+async def clear(ctx, amount):
+	if ctx.author.guild_permissions.manage_messages:
+		await ctx.purge(limit=amount)
+		if amount > 1:
+			await ctx.send(f'Cleared {amount} messages!')
+			await ctx.purge(limit=1)
+		else:
+			await ctx.send(f'Cleared {amount} message!')
+	elif amount == float:
+		await ctx.send('Amount must be a whole number')
+		await ctx.purge(limit=1)
+	else:
+		await ctx.send('You do not have the permissions to clear messages')
+		await ctx.purge(limit=1)
+
 
 bot.run(TOKEN)
