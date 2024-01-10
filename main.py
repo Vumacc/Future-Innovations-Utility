@@ -15,6 +15,7 @@ with open('config.json') as config_file:
 				WELCOME_CHANNEL_ID = int(config.get('welcome_channel_id'))
 				PREFIX = config.get('prefix')
 				NEWS_API_KEY = config.get('news_api_key')
+				FIXER_API_KEY = config.get('fixer_api_key')	
 bot = discord.Bot(command_prefix=PREFIX)
 
 @bot.event
@@ -51,6 +52,7 @@ async def commands(ctx):
 - **Giveaway `duration` `prize` |** Start a giveaway with a set prize and duration
 - **Calculator |** A built-in calculator
 - **News `query` |** Shows an article based on your query
+- **convert `amount` `from_currency` `to_currency` |** Converts currency
 		''',
 		inline=False
 	)
@@ -171,6 +173,36 @@ async def news(ctx, *, query):
 								await ctx.send(f"Error: {e}")
 
 
+@bot.command()
+async def convert(ctx, amount: float = None, from_currency: str = None, to_currency: str = None):
+		try:
+				if amount is None or from_currency is None or to_currency is None:
+						await ctx.send("Please provide all required arguments: amount, from_currency, and to_currency")
+						return
+				url = f"http://data.fixer.io/api/latest?access_key={FIXER_API_KEY}&format=1{from_currency}"
+				response = requests.get(url)
+				if response.status_code == 200:
+						data = response.json()
+						if 'rates' in data and to_currency in data['rates']:
+								exchange_rate = data['rates'][to_currency]
+								converted_amount = amount * exchange_rate
+								response_message = (
+										f"Converting {amount} {from_currency} to {to_currency}:\n"
+										f"Result: {amount} {from_currency} is {converted_amount} {to_currency}"
+								)
+								await ctx.send(response_message)
+						else:
+								await ctx.send(f"Currency {to_currency} not found.")
+				else:
+						await ctx.send("Unable to fetch exchange rates. Please try again later.")
+		except requests.exceptions.RequestException as e:
+				await ctx.send(f"An error occurred during the API request: {e}")
+		except ValueError as e:
+				await ctx.send(f"An error occurred while processing the response data: {e}")
+		except Exception as e:
+				await ctx.send(f"An unexpected error occurred: {e}")
+
+
 # --- Moderation Commands ---
 
 # Ban command
@@ -232,21 +264,21 @@ async def kick(ctx, member: discord.Member, *, reason=None):
 		await ctx.purge(limit=1)
 
 # Clear command
-bot.command()
-async def clear(ctx, amount):
-	if ctx.author.guild_permissions.manage_messages:
-		await ctx.purge(limit=amount)
-		if amount > 1:
-			await ctx.send(f'Cleared {amount} messages!')
-			await ctx.purge(limit=1)
-		else:
-			await ctx.send(f'Cleared {amount} message!')
-	elif amount == float:
-		await ctx.send('Amount must be a whole number')
-		await ctx.purge(limit=1)
-	else:
-		await ctx.send('You do not have the permissions to clear messages')
-		await ctx.purge(limit=1)
+@bot.command()
+async def clear(ctx, amount: int):
+    if ctx.author.guild_permissions.manage_messages:
+        amount = min(amount, 100)
 
+        try:
+            deleted = await ctx.channel.purge(limit=amount)
+            message_count = len(deleted)
+            if message_count > 1:
+                await ctx.send(f'Cleared {message_count} messages!')
+            elif message_count == 1:
+                await ctx.send(f'Cleared {message_count} message!')
+        except discord.HTTPException:
+            await ctx.send('The bot is rate-limited. Please try again later.')
+    else:
+        await ctx.send('You do not have the permissions to clear messages')
 
 bot.run(TOKEN)
