@@ -3,4 +3,5 @@
 				"welcome_channel_id": "YourWelcomeChannelID",
 			 	"prefix": "YourPrefix",
 				"news_api_key": "NewsAPIKey"
+				"fixer_api_key": "FixerAPIKey"
 }
