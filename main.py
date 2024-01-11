@@ -29,8 +29,8 @@ async def on_ready():
 
 @bot.event
 async def on_member_join(member):
-				welcome_channel = bot.get_channel(WELCOME_CHANNEL_ID)
-				await welcome_channel.send(
+				channel = bot.get_channel(WELCOME_CHANNEL_ID)
+				await channel.send(
 								f'Welcome to Future Innovators Hub, {member.mention}! we have fun this server. Hope you enjoy me server! If I don\'t kick you.')
 				await member.send(f'Welcome to the server, {member.mention}! Enjoy your stay here.')
 
@@ -60,9 +60,11 @@ async def commands(ctx):
 	embed.add_field(
 		name='__Moderation commands__',
 		value='''
-- **Ban `user` `reason` |** Bans a member from the guild
-- **Kick `user` `reason` |** Kicks a member from the guild
+- **Ban `@user` `reason` |** Bans a member from the guild
+- **Unban `userID` |**Unbans a member from the guild
+- **Kick `@user` `reason` |** Kicks a member from the guild
 - **Clear `amount` |** Deletes the amount of messages specified
+- **mute `@user` `reason` |** Mutes a a specified user
 ''', 
 		inline=False
 	)
@@ -77,53 +79,56 @@ async def commands(ctx):
 # Ping
 @bot.command()
 async def ping(ctx):
-				latency = bot.latency * 1000
-				await ctx.send(f'''
-				Pong!
-				Latency: {latency:.2f}ms''')
+	latency = bot.latency * 1000
+	await ctx.send(f'''
+	Pong!
+	atency: {latency:.2f}ms''')
 
 # Giveaway
 @bot.command()
-async def giveaway(ctx, duration, prize):
-		if ctx.author.guild_permissions.administrator:
-				try:
-						if not re.match(r"^\d+(s|m|h|d)$", duration):
-								embed = discord.Embed(description="Invalid duration format. Please use a number followed by s (seconds), m (minutes), h (hours), or d (days).", color=discord.Color.red())
-								await ctx.send(embed=embed)
-								return
-						numeric_part = int(duration[:-1])
-						if numeric_part < 1 or numeric_part > 10080:
-								embed = discord.Embed(description="Duration value must be between 1 and 10,080.", color=discord.Color.red())
-								await ctx.send(embed=embed)
-								return
-						time_conversion = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-						unit = duration[-1]
-						duration_in_seconds = int(duration[:-1]) * time_conversion[unit]
-						giveaway_embed = discord.Embed(title="🎉 **Giveaway** 🎉", description=f"**Prize**: {prize}\n**Duration**: {duration}\nReact with 🎉 to enter!", color=discord.Color.blue())
-						giveaway_embed.set_footer(text=f"Hosted by {ctx.author.display_name}", icon_url=ctx.author.avatar_url)
-						giveaway_msg = await ctx.send(embed=giveaway_embed)
-						await giveaway_msg.add_reaction("🎉")
-						await asyncio.sleep(duration_in_seconds)
-						updated_giveaway_msg = await ctx.fetch_message(giveaway_msg.id)
-						reactions = [reaction for reaction in updated_giveaway_msg.reactions if str(reaction.emoji) == "🎉"]
-						winner = None
-						if len(reactions) > 0:
-								users = await reactions[0].users().flatten()
-								users.remove(bot.user)
-								if len(users) > 0:
-										winner = random.choice(users)
-						if winner:
-								winner_embed = discord.Embed(description=f"🎉 Congratulations to {winner.mention} for winning the {prize}! 🎉", color=discord.Color.green())
-								await ctx.send(embed=winner_embed)
-						else:
-								no_winner_embed = discord.Embed(description="The giveaway has ended, and no one participated. Better luck next time!", color=discord.Color.orange())
-								await ctx.send(embed=no_winner_embed)
-				except Exception as e:
-						error_embed = discord.Embed(description=f"An error occurred: {e}", color=discord.Color.red())
-						await ctx.send(embed=error_embed)
-		else:
-				permissions_embed = discord.Embed(description="You do not have permission to start a giveaway.", color=discord.Color.red())
-				await ctx.send(embed=permissions_embed)
+async def giveaway(ctx, duration: str, prize: str):
+    if not ctx.author.guild_permissions.administrator:
+        embed = discord.Embed(description="You do not have permission to start a giveaway.", color=discord.Color.red())
+        await ctx.send(embed=embed)
+        return
+
+    if not re.match(r"^\d+(s|m|h|d)$", duration):
+        embed = discord.Embed(description="Invalid duration format. Please use a number followed by s (seconds), m (minutes), h (hours), or d (days).", color=discord.Color.red())
+        await ctx.send(embed=embed)
+        return
+
+    numeric_part = int(duration[:-1])
+    if numeric_part < 1 or numeric_part > 10080:
+        embed = discord.Embed(description="Duration value must be between 1 and 10,080.", color=discord.Color.red())
+        await ctx.send(embed=embed)
+        return
+
+    time_conversion = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+    unit = duration[-1]
+    duration_in_seconds = int(duration[:-1]) * time_conversion[unit]
+
+    giveaway_embed = discord.Embed(title="🎉 **Giveaway** 🎉", description=f"**Prize**: {prize}\n**Duration**: {duration}\nReact with 🎉 to enter!", color=discord.Color.blue())
+    giveaway_embed.set_footer(text=f"Hosted by {ctx.author.display_name}", icon_url=ctx.author.avatar_url)
+    giveaway_msg = await ctx.send(embed=giveaway_embed)
+    await giveaway_msg.add_reaction("🎉")
+    await asyncio.sleep(duration_in_seconds)
+
+    updated_giveaway_msg = await ctx.fetch_message(giveaway_msg.id)
+    reactions = [reaction for reaction in updated_giveaway_msg.reactions if str(reaction.emoji) == "🎉"]
+    winner = None
+
+    if len(reactions) > 0:
+        users = await reactions[0].users().flatten()
+        users.remove(bot.user)
+        if len(users) > 0:
+            winner = random.choice(users)
+
+    if winner:
+        winner_embed = discord.Embed(description=f"🎉 Congratulations to {winner.mention} for winning the {prize}! 🎉", color=discord.Color.green())
+        await ctx.send(embed=winner_embed)
+    else:
+        no_winner_embed = discord.Embed(description="The giveaway has ended, and no one participated. Better luck next time!", color=discord.Color.orange())
+        await ctx.send(embed=no_winner_embed)
 
 # Calculate
 @bot.command()
@@ -234,6 +239,28 @@ async def ban(ctx, member: discord.Member, *, reason=None):
 		time.sleep(1)
 		await ctx.purge(limit=1)
 
+# Unban command
+@bot.command()
+async def unban(ctx, member: discord.Member):
+	if ctx.author.guild_permissions.ban_members:
+
+		embed = discord.Embed(
+		title=f'User has been unbanned',
+		color=0x00ff00
+			)
+
+		embed.add_field(
+		name=f'{member} has been banned!',
+		value=''
+			)
+
+		await ctx.send(embed=embed)
+	
+	else:
+		await ctx.send('You do not have permissions to unban members')
+		time.sleep(1)
+		await ctx.purge(limit=1)
+
 # Kick command
 @bot.command()
 async def kick(ctx, member: discord.Member, *, reason=None):
@@ -277,8 +304,36 @@ async def clear(ctx, amount: int):
             elif message_count == 1:
                 await ctx.send(f'Cleared {message_count} message!')
         except discord.HTTPException:
-            await ctx.send('The bot is rate-limited. Please try again later.')
+            await ctx.send('The bot is rate-limited. Please try again later')
     else:
         await ctx.send('You do not have the permissions to clear messages')
+
+# mute command
+@bot.command()
+async def mute(ctx, member: discord.Member, *, reason=None):
+    if not ctx.author.guild_permissions.mute_members:
+        await ctx.send('You do not have the permission to mute members')
+        time.sleep(1)
+        await ctx.purge(limit=1)
+        return
+
+    await member.mute(reason=reason)
+
+    if member.guild_permissions.administrator:
+        await ctx.send('Targeted member is an administrator')
+        time.sleep(1)
+        await ctx.purge(limit=1)
+
+    embed = discord.Embed(
+        title=f'User has been muted',
+        color=0x00ff00
+    )
+
+    embed.add_field(
+        name=f'{member} has been muted!',
+        value=f'**Mute reason:** {reason}'
+    )
+
+    await ctx.send(embed=embed)
 
 bot.run(TOKEN)
