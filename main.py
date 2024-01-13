@@ -10,13 +10,12 @@ import re
 
 
 with open('config.json') as config_file:
-				config = json.load(config_file)
-				TOKEN = config.get('token')
-				WELCOME_CHANNEL_ID = int(config.get('welcome_channel_id'))
-				PREFIX = config.get('prefix')
-				NEWS_API_KEY = config.get('news_api_key')
-				FIXER_API_KEY = config.get('fixer_api_key')	
-bot = discord.Bot(command_prefix=PREFIX)
+	config = json.load(config_file)
+	TOKEN = config['tokens']['discord']
+	WELCOME_CHANNEL_ID = int(config['identifiers']['welcome_channel_id'])
+	PREFIX = config['settings']['prefix']
+	NEWS_API_KEY = config['api_keys']['news']
+	FIXER_API_KEY = config['api_keys']['fixer']
 
 @bot.event
 async def on_command_error(ctx, error):
