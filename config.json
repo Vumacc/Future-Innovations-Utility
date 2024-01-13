@@ -1,7 +1,15 @@
 {
-				"token": "YourDiscordBotToken",
-				"welcome_channel_id": "YourWelcomeChannelID",
-			 	"prefix": "YourPrefix",
-				"news_api_key": "NewsAPIKey",
-				"fixer_api_key": "FixerAPIKey"
+	"tokens": {
+		"discord": "your_discord_bot_token"
+	},
+	"api_keys": {
+		"news": "your_news_api_key",
+		"fixer": "your_fixer_api_key"
+	},
+	"identifiers": {
+		"welcome_channel_id": "your_welcome_channel_id"
+	},
+	"settings": {
+		"prefix": "!"
+	}
 }
